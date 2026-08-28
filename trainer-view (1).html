@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1E3329">
+<title>Coach View · Aliyah</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --forest:#1E3329; --taupe:#C4A882; --olive:#7A9E7E; --cream:#FAF7F2; --cream-dark:#F0EBE3;
+    --black:#1A1A1A; --dgray:#555555; --mgray:#999999; --lgray:#E8E4DF; --white:#FFFFFF; --warn:#C4763A;
+    --radius:16px; --radius-sm:10px; --shadow:0 2px 14px rgba(30,51,41,0.07); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--black); max-width:480px; margin:0 auto; padding-bottom:40px; }
+  .topbar { background:var(--forest); color:var(--white); padding:22px 20px 18px; border-bottom:3px solid var(--taupe); }
+  .eyebrow { font-size:9.5px; letter-spacing:1.5px; color:var(--taupe); font-weight:700; text-transform:uppercase; }
+  .title { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:600; margin-top:3px; }
+  .content { padding:18px; }
+  .card { background:var(--white); border-radius:var(--radius); padding:17px; box-shadow:var(--shadow); margin-bottom:14px; }
+  .card-title { font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:600; color:var(--forest); margin-bottom:8px; }
+  .section-label { font-size:10px; letter-spacing:1.3px; color:var(--taupe); font-weight:700; text-transform:uppercase; margin:20px 0 10px; }
+  .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:14px; }
+  .stat-box { background:var(--white); border-radius:var(--radius-sm); padding:13px 6px; box-shadow:var(--shadow); text-align:center; }
+  .stat-num { font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:600; color:var(--forest); }
+  .stat-label { font-size:9px; color:var(--mgray); margin-top:1px; }
+  textarea, input { font-family:inherit; width:100%; border:1px solid var(--lgray); border-radius:var(--radius-sm);
+    padding:10px 12px; font-size:13px; background:var(--cream); color:var(--black); }
+  textarea { resize:none; min-height:80px; margin-top:8px; }
+  .btn { background:var(--forest); color:var(--white); font-weight:600; font-size:13.5px; padding:12px;
+    border-radius:var(--radius-sm); width:100%; margin-top:10px; }
+  .btn:active { opacity:.85; }
+  .list-row { padding:10px 0; border-bottom:1px solid var(--lgray); }
+  .list-row:last-child { border-bottom:none; }
+  .row-date { font-size:10px; color:var(--mgray); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+  .row-text { font-size:12.5px; color:var(--dgray); margin-top:2px; line-height:1.5; }
+  .empty-state { text-align:center; padding:16px 10px; color:var(--mgray); font-size:12px; }
+  .refresh-btn { background:var(--cream-dark); color:var(--forest); font-weight:600; font-size:13px;
+    padding:12px; border-radius:var(--radius-sm); width:100%; margin-top:6px; }
+  .phase-card { background:var(--white); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow); margin-bottom:12px; }
+  .phase-tag { font-size:9.5px; letter-spacing:1px; color:var(--taupe); font-weight:700; text-transform:uppercase; }
+  .phase-name { font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:600; color:var(--forest); margin:2px 0 10px; }
+  .prog-ex { padding:8px 0; border-bottom:1px solid var(--lgray); }
+  .prog-ex:last-child { border-bottom:none; }
+  .prog-ex-name { font-size:12.5px; font-weight:600; color:var(--black); }
+  .prog-ex-cue { font-size:11px; color:var(--dgray); margin-top:2px; line-height:1.5; }
+  .setup-note { color:var(--warn); font-size:13px; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="eyebrow">COACH VIEW · READ-ONLY</div>
+  <div class="title">Aliyah</div>
+</div>
+
+<div class="content" id="mainContent">
+
+  <div class="card">
+    <div class="card-title">Write a note for Aliyah</div>
+    <div style="font-size:11.5px; color:var(--mgray); margin-bottom:0;">She sees this immediately in her Coach Notes tab.</div>
+    <textarea id="noteInput" placeholder="What you worked on, what clicked, what to focus on before next time..."></textarea>
+    <button class="btn" id="noteSaveBtn">Save note for Aliyah</button>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-num" id="statSessions">—</div><div class="stat-label">sessions</div></div>
+    <div class="stat-box"><div class="stat-num" id="statCheckins">—</div><div class="stat-label">check-ins</div></div>
+    <div class="stat-box"><div class="stat-num" id="statPhotos">—</div><div class="stat-label">photos</div></div>
+  </div>
+
+  <div class="section-label">Program overview — all 12 weeks</div>
+  <div id="programOverview"></div>
+
+  <div class="section-label">Previous notes</div>
+  <div class="card"><div id="prevNotesList"><div class="empty-state">Loading...</div></div></div>
+
+  <div class="section-label">Check-ins</div>
+  <div class="card"><div id="checkinList"><div class="empty-state">Loading...</div></div></div>
+
+  <div class="section-label">Sessions logged</div>
+  <div class="card"><div id="sessionList"><div class="empty-state">Loading...</div></div></div>
+
+  <div class="section-label">Food log — protein-focused</div>
+  <div class="card"><div id="proteinList"><div class="empty-state">Loading...</div></div></div>
+
+  <div class="section-label">Movement log</div>
+  <div class="card"><div id="movementList"><div class="empty-state">Loading...</div></div></div>
+
+  <div class="section-label">Wins</div>
+  <div class="card"><div id="winList"><div class="empty-state">Loading...</div></div></div>
+
+  <div class="section-label">Progress photos</div>
+  <div class="card"><div id="photoGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;"><div class="empty-state" style="grid-column:1/-1;">Loading...</div></div></div>
+
+  <button class="refresh-btn" id="refreshBtn">Refresh</button>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://mimaexschnbsdnfcluev.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE'; // same key as her app
+let sb = null, ready = false;
+try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); ready = true; } catch (e) { console.error(e); }
+
+const $ = id => document.getElementById(id);
+const fmtShort = d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' });
+const todayISO = () => new Date().toISOString().slice(0,10);
+
+/* ============ PROGRAM OVERVIEW (kept in sync with the app) ============ */
+const LOWER_ORDER=['squat','hinge','unilateral','hipext','plank','finisher'];
+const UPPER_ORDER=['push','pull','pull2','carry','finisher'];
+const PROGRAM=[
+ { label:'Weeks 1-4 — Assess + Establish',
+   lower:{ squat:{name:'Goblet squat',cue:"Feet planted, weight through the whole foot. Sit back and down like reaching for a chair."},
+     hinge:{name:'DB Romanian deadlift',cue:"Drive feet into the floor — legs stabilize, not the low back. Stop where the hinge is felt."},
+     unilateral:{name:'Reverse lunge',cue:'Step back under control, front foot glued down.'},
+     hipext:{name:'Glute bridge',cue:'Feet close to hips, drive through heels, squeeze at the top.'},
+     plank:{name:'Front plank',cue:'Full-body brace, no sagging or piking hips.'},
+     finisher:{name:'Easy incline walk',cue:'8-10 min, conversational pace.'} },
+   upper:{ push:{name:'Seated DB shoulder press',cue:'Back pressed into bench, legs active. Press without ribs flaring.'},
+     pull:{name:'Seated cable row',cue:'Pull with shoulder blades first, elbows close.'},
+     pull2:{name:'Lat pulldown',cue:'Elbows drive down and back, chest lifted.'},
+     carry:{name:'Suitcase carry',cue:'Tall posture, no leaning toward the weight.'},
+     finisher:{name:'Easy incline walk',cue:'8-10 min, conversational pace.'} } },
+ { label:'Weeks 5-8 — Build',
+   lower:{ squat:{name:'Front squat',cue:'Elbows up for rack position, brace before every rep.'},
+     hinge:{name:'Barbell RDL',cue:'Feet glued down, bar close to legs. Stop at the hinge.'},
+     unilateral:{name:'Bulgarian split squat',cue:'Back foot elevated, control the lower.'},
+     hipext:{name:'Barbell hip thrust',cue:'Drive through heels to lockout, no hyperextending.'},
+     plank:{name:'Side plank',cue:'Stack hips and shoulders.'},
+     finisher:{name:'Rower or bike intervals',cue:'8-10 min work/rest.'} },
+   upper:{ push:{name:'Standing DB shoulder press',cue:'Braced standing, no leaning back to press.'},
+     pull:{name:'Single-arm DB row',cue:'Free hand braced, row to hip, squeeze shoulder blade.'},
+     pull2:{name:'Lat pulldown (heavier)',cue:'Same feeling, heavier load.'},
+     carry:{name:"Farmer's carry",cue:'Steady pace, tall posture.'},
+     finisher:{name:'Rower or bike intervals',cue:'8-10 min work/rest.'} } },
+ { label:'Weeks 9-12 — Progress + Own It',
+   lower:{ squat:{name:'Back squat',cue:'Own the setup and bracing before unracking.'},
+     hinge:{name:'Trap bar deadlift',cue:'Full-body tension before the pull.'},
+     unilateral:{name:'Loaded walking lunge',cue:'Load over midline, front knee tracks straight.'},
+     hipext:{name:'Single-leg hip thrust',cue:'One leg at a time, hips stay square.'},
+     plank:{name:'Weighted / extended plank',cue:'Full brace maintained the entire time.'},
+     finisher:{name:'Short HIIT circuit',cue:'8-10 min, her choice of format.'} },
+   upper:{ push:{name:'Standing barbell/DB press',cue:'Heavier load, legs and core stabilize.'},
+     pull:{name:'Chest-supported row',cue:'Chest pinned to pad, pull with the back.'},
+     pull2:{name:'Assisted pull-up / wide pulldown',cue:'Full stretch, elbows drive down hard.'},
+     carry:{name:"Heavy farmer's carry",cue:'Grip + total-body control.'},
+     finisher:{name:'Short HIIT circuit',cue:'8-10 min, her choice of format.'} } },
+];
+function renderProgramOverview(){
+  $('programOverview').innerHTML = PROGRAM.map(phase => `
+    <div class="phase-card"><div class="phase-tag">LOWER BODY DAY (MON)</div><div class="phase-name">${phase.label}</div>
+      ${LOWER_ORDER.map(k=>`<div class="prog-ex"><div class="prog-ex-name">${phase.lower[k].name}</div><div class="prog-ex-cue">${phase.lower[k].cue}</div></div>`).join('')}
+    </div>
+    <div class="phase-card"><div class="phase-tag">UPPER BODY DAY (WED)</div><div class="phase-name">${phase.label}</div>
+      ${UPPER_ORDER.map(k=>`<div class="prog-ex"><div class="prog-ex-name">${phase.upper[k].name}</div><div class="prog-ex-cue">${phase.upper[k].cue}</div></div>`).join('')}
+    </div>`).join('');
+}
+renderProgramOverview();
+
+if (!ready) {
+  const banner = document.createElement('div');
+  banner.className = 'card';
+  banner.innerHTML = '<div class="setup-note"><b>Setup needed:</b> paste your Supabase anon key in this file (same one as Aliyah\u2019s app) to load her data below. The program overview above works either way.</div>';
+  $('mainContent').prepend(banner);
+}
+
+$('noteSaveBtn').addEventListener('click', async () => {
+  if (!ready) { alert('Add your Supabase key in this file first.'); return; }
+  const note = $('noteInput').value.trim();
+  if (!note) return;
+  const btn = $('noteSaveBtn'); btn.disabled = true; btn.textContent = 'Saving...';
+  const { error } = await sb.from('aliyah_coach_notes').insert({ date: todayISO(), note });
+  btn.disabled = false; btn.textContent = 'Save note for Aliyah';
+  if (error) { alert('Something went wrong saving that. Try again.'); return; }
+  $('noteInput').value = '';
+  loadAll();
+});
+
+async function loadAll() {
+  if (!ready) return;
+
+  const { data: notes } = await sb.from('aliyah_coach_notes').select('*').order('date', { ascending:false }).limit(20);
+  $('prevNotesList').innerHTML = (notes && notes.length) ? notes.map(n => `
+    <div class="list-row"><div class="row-date">${fmtShort(n.date)}</div><div class="row-text">${n.note}</div></div>
+  `).join('') : '<div class="empty-state">No notes written yet.</div>';
+
+  const { count: sessionCount } = await sb.from('aliyah_sessions').select('*', { count:'exact', head:true });
+  $('statSessions').textContent = sessionCount ?? 0;
+  const { count: checkinCount } = await sb.from('aliyah_checkins').select('*', { count:'exact', head:true });
+  $('statCheckins').textContent = checkinCount ?? 0;
+  const { count: photoCount } = await sb.from('aliyah_photos').select('*', { count:'exact', head:true });
+  $('statPhotos').textContent = photoCount ?? 0;
+
+  const { data: checkins } = await sb.from('aliyah_checkins').select('*').order('date', { ascending:false }).limit(20);
+  $('checkinList').innerHTML = (checkins && checkins.length) ? checkins.map(r => `
+    <div class="list-row"><div class="row-date">${fmtShort(r.date)} · ${r.day_type}</div>
+    <div class="row-text">${r.trained ? '✓ trained' : 'no session'} · ${r.protein_hit ? '✓ protein' : 'protein missed'}${r.water ? ' · ✓ water' : ''}${r.electrolytes ? ' · ✓ electrolytes' : ''}${r.notes ? '<br>“' + r.notes + '”' : ''}</div></div>
+  `).join('') : '<div class="empty-state">No check-ins yet.</div>';
+
+  const { data: sessions } = await sb.from('aliyah_sessions').select('*').order('date', { ascending:false }).limit(20);
+  $('sessionList').innerHTML = (sessions && sessions.length) ? sessions.map(r => {
+    const items = Object.values(r.exercises || {}).map(e => `${e.name}: ${e.sets_reps || '—'} @ ${e.weight || '—'}`).join(' · ');
+    return `<div class="list-row"><div class="row-date">${fmtShort(r.date)} · ${r.session_type}</div><div class="row-text">${items}</div></div>`;
+  }).join('') : '<div class="empty-state">No sessions logged yet.</div>';
+
+  const { data: protein } = await sb.from('aliyah_protein_log').select('*').order('date', { ascending:false }).order('created_at', { ascending:true }).limit(60);
+  if (protein && protein.length) {
+    const byDate = {};
+    protein.forEach(r => { (byDate[r.date] = byDate[r.date] || []).push(r); });
+    const dates = Object.keys(byDate).sort().reverse();
+    $('proteinList').innerHTML = dates.map(date => {
+      const entries = byDate[date];
+      const dayProtein = entries.reduce((s, r) => s + (r.grams || 0), 0);
+      const dayCal = entries.reduce((s, r) => s + (r.calories || 0), 0);
+      const rows = entries.map(r => `<div class="row-text">${r.item} — ${r.grams ? r.grams + 'g' : ''}${r.grams && r.calories ? ' · ' : ''}${r.calories ? r.calories + ' cal' : ''}</div>`).join('');
+      return `<div class="list-row"><div class="row-date">${fmtShort(date)} · ${dayProtein}g protein · ${dayCal} cal</div>${rows}</div>`;
+    }).join('');
+  } else { $('proteinList').innerHTML = '<div class="empty-state">Nothing logged yet.</div>'; }
+
+  const { data: movement } = await sb.from('aliyah_movement_log').select('*').order('date', { ascending:false }).limit(20);
+  $('movementList').innerHTML = (movement && movement.length) ? movement.map(r => `
+    <div class="list-row"><div class="row-date">${fmtShort(r.date)}</div><div class="row-text">${r.type}${r.minutes ? ' · ' + r.minutes + ' min' : ''}${r.distance ? ' · ' + r.distance : ''}</div></div>
+  `).join('') : '<div class="empty-state">No movement logged yet.</div>';
+
+  const { data: wins } = await sb.from('aliyah_wins').select('*').order('date', { ascending:false }).limit(20);
+  $('winList').innerHTML = (wins && wins.length) ? wins.map(r => `
+    <div class="list-row"><div class="row-date">${fmtShort(r.date)}</div><div class="row-text">${r.note}</div></div>
+  `).join('') : '<div class="empty-state">No wins logged yet.</div>';
+
+  const { data: photos } = await sb.from('aliyah_photos').select('*').order('date', { ascending:false }).limit(30);
+  $('photoGrid').innerHTML = (photos && photos.length) ? photos.map(p => `
+    <div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--cream-dark);"><img src="${p.url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"></div>
+  `).join('') : '<div class="empty-state" style="grid-column:1/-1;">No photos yet.</div>';
+}
+
+$('refreshBtn').addEventListener('click', loadAll);
+loadAll();
+</script>
+</body>
+</html>
