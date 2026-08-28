@@ -74,5 +74,39 @@ function bindCoach(){document.getElementById('editProgram')?.addEventListener('c
 function openModal(html){const m=document.getElementById('modal');m.innerHTML=`<div class="modal">${html}</div>`;m.classList.add('open');m.setAttribute('aria-hidden','false')}
 function closeModal(){const m=document.getElementById('modal');m.classList.remove('open');m.setAttribute('aria-hidden','true')}
 window.closeModal=closeModal;window.saveModalNote=()=>{const text=document.getElementById('modalNote').value.trim();if(text){state.notes.push({date:today(),text});persist();closeModal();toast('Coach note saved');showMode('coach')}};
+async function loadClientWorkouts(){
+
+const {data,error}=await sb
+.from('client_workouts')
+.select(`
+id,
+name,
+scheduled_date,
+client_workout_exercises(
+sort_order,
+exercises(name)
+)
+`)
+.eq('client_id','d671af58-2ca1-42a6-b898-ccf5b9c91461');
+
+if(error){
+console.error(error);
+return;
+}
+
+CLIENT.workouts=data.map(w=>({
+id:w.id,
+day:'',
+name:w.name,
+focus:'Assigned workout',
+note:'',
+exercises:(w.client_workout_exercises||[])
+.sort((a,b)=>a.sort_order-b.sort_order)
+.map(e=>({
+name:e.exercises.name
+}))
+}));
+
+}
 initAuth();
 loadClientWorkouts().then(()=>render());
