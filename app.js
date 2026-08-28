@@ -74,4 +74,5 @@ function bindCoach(){document.getElementById('editProgram')?.addEventListener('c
 function openModal(html){const m=document.getElementById('modal');m.innerHTML=`<div class="modal">${html}</div>`;m.classList.add('open');m.setAttribute('aria-hidden','false')}
 function closeModal(){const m=document.getElementById('modal');m.classList.remove('open');m.setAttribute('aria-hidden','true')}
 window.closeModal=closeModal;window.saveModalNote=()=>{const text=document.getElementById('modalNote').value.trim();if(text){state.notes.push({date:today(),text});persist();closeModal();toast('Coach note saved');showMode('coach')}};
-initAuth();render();
+initAuth();
+loadClientWorkouts().then(()=>render());
