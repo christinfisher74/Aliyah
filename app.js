@@ -103,7 +103,11 @@ note:'',
 exercises:(w.client_workout_exercises||[])
 .sort((a,b)=>a.sort_order-b.sort_order)
 .map(e=>({
-name:e.exercises.name
+id:e.exercises.id,
+name:e.exercises.name,
+sets:3,
+reps:'10-12',
+cue:'Focus on controlled movement and quality reps.'
 }))
 }));
 
