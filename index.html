@@ -838,6 +838,9 @@ function renderProgress(panel){
       <div class="card-sub">Heavier lift, better form, made it through a rough week — log it here.</div>
       <div class="row-inputs"><input class="input" id="winInput" placeholder="What felt like a win today?"><button class="btn-add" id="winAddBtn">+</button></div>
       <div id="winList" style="margin-top:10px;"><div class="empty-state">Your wins will collect here as you go.</div></div>
+      <div class="card-title" style="font-size:15px;margin-top:18px;">Progress updates from Christin</div>
+      <div class="card-sub">Your monthly check-ins and coaching milestones.</div>
+      <div id="coachProgressList" style="margin-top:10px;"><div class="empty-state">Your coach's progress updates will appear here.</div></div>
     </div>
     <div class="card">
       <div class="card-title" style="font-size:15px;">Progress photos</div>
@@ -862,9 +865,18 @@ async function addWin(){
 }
 async function loadWins(){
   if(!supabaseReady)return;
-  const {data,error}=await sb.from('aliyah_wins').select('*').order('date',{ascending:false}).limit(15);
-  if(error||!data||!data.length)return;
-  $('winList').innerHTML=data.map(r=>`<div class="list-row"><div><div class="row-date">${fmtShort(r.date)}</div><div style="font-size:12px;color:var(--dgray);margin-top:2px;">${r.note}</div></div></div>`).join('');
+  const {data,error}=await sb.from('aliyah_wins').select('*').order('date',{ascending:false}).limit(100);
+  if(error)return;
+  const rows=data||[], marker='FSC_COACH_PROGRESS:';
+  const coachRows=rows.filter(r=>String(r.note||'').startsWith(marker));
+  const wins=rows.filter(r=>!String(r.note||'').startsWith(marker)).slice(0,15);
+  $('winList').innerHTML=wins.length?wins.map(r=>`<div class="list-row"><div><div class="row-date">${fmtShort(r.date)}</div><div style="font-size:12px;color:var(--dgray);margin-top:2px;">${r.note}</div></div></div>`).join(''):'<div class="empty-state">Your wins will collect here as you go.</div>';
+  const target=$('coachProgressList');
+  if(target)target.innerHTML=coachRows.length?coachRows.map(r=>{
+    let p={};try{p=JSON.parse(String(r.note).slice(marker.length));}catch(e){}
+    const fields=[['Weight',p.weight,'lb'],['Estimated lean mass',p.leanMass,'lb'],['Estimated body fat',p.bodyFat,'%'],['BMI',p.bmi,''],['Body water',p.bodyWater,'%'],['Muscle',p.muscle,' %'],['Visceral fat index',p.visceralFat,''],['Subcutaneous fat',p.subcutaneousFat,'lb']].filter(x=>x[1]!==''&&x[1]!=null);
+    return `<article class="card" style="padding:12px;margin:8px 0;"><div class="row-date">${fmtShort(r.date)}</div>${fields.map(x=>`<div class="list-row"><span>${x[0]}</span><strong>${x[1]}${x[2]}</strong></div>`).join('')}${p.strength?'<p><b>Strength:</b> '+p.strength+'</p>':''}${p.notes?'<p>'+p.notes+'</p>':''}</article>`;
+  }).join(''):'<div class="empty-state">Your coach\'s progress updates will appear here.</div>';
 }
 async function uploadPhoto(e){
   const file=e.target.files[0];if(!file)return;
