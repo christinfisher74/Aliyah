@@ -872,11 +872,22 @@ async function loadWins(){
   const wins=rows.filter(r=>!String(r.note||'').startsWith(marker)).slice(0,15);
   $('winList').innerHTML=wins.length?wins.map(r=>`<div class="list-row"><div><div class="row-date">${fmtShort(r.date)}</div><div style="font-size:12px;color:var(--dgray);margin-top:2px;">${r.note}</div></div></div>`).join(''):'<div class="empty-state">Your wins will collect here as you go.</div>';
   const target=$('coachProgressList');
-  if(target)target.innerHTML=coachRows.length?coachRows.map(r=>{
-    let p={};try{p=JSON.parse(String(r.note).slice(marker.length));}catch(e){}
-    const fields=[['Weight',p.weight,'lb'],['Estimated lean mass',p.leanMass,'lb'],['Estimated body fat',p.bodyFat,'%'],['BMI',p.bmi,''],['Body water',p.bodyWater,'%'],['Muscle',p.muscle,' %'],['Visceral fat index',p.visceralFat,''],['Subcutaneous fat',p.subcutaneousFat,'lb']].filter(x=>x[1]!==''&&x[1]!=null);
-    return `<article class="card" style="padding:12px;margin:8px 0;"><div class="row-date">${fmtShort(r.date)}</div>${fields.map(x=>`<div class="list-row"><span>${x[0]}</span><strong>${x[1]}${x[2]}</strong></div>`).join('')}${p.strength?'<p><b>Strength:</b> '+p.strength+'</p>':''}${p.notes?'<p>'+p.notes+'</p>':''}</article>`;
-  }).join(''):'<div class="empty-state">Your coach\'s progress updates will appear here.</div>';
+  if(!target)return;
+  const parsed=coachRows.map(r=>{let p={};try{p=JSON.parse(String(r.note).slice(marker.length));}catch(e){}return {date:r.date,...p};}).sort((x,y)=>String(x.date).localeCompare(String(y.date)));
+  const metrics=[['weight','Weight','lb'],['bmi','BMI',''],['bodyFat','Body fat','%'],['bodyWater','Body water','%'],['skeletalMuscle','Skeletal muscle','%'],['bone','Bone','%'],['protein','Protein','%'],['muscle','Muscle','%'],['muscleReserve','Muscle reserve capacity',''],['visceralFat','Visceral fat index',''],['subcutaneousFat','Subcutaneous fat','lb'],['leanMass','Lean body mass','lb']];
+  const fmt=v=>Number.isFinite(Number(v))?String(v):'';
+  const cards=metrics.map(([key,label,unit])=>{
+    const points=parsed.filter(p=>p[key]!==''&&p[key]!=null);
+    if(!points.length)return '';
+    const values=points.map(p=>Number(p[key])).filter(Number.isFinite);
+    const min=Math.min(...values),max=Math.max(...values),range=max-min||1;
+    const coords=points.map((p,i)=>({x:12+(i*276/Math.max(1,points.length-1)),y:70-((Number(p[key])-min)/range)*52,v:Number(p[key])}));
+    const path=coords.map((q,i)=>(i?'L':'M')+q.x.toFixed(1)+' '+q.y.toFixed(1)).join(' ');
+    const first=coords[0].v,last=coords[coords.length-1].v,delta=last-first;
+    const change=delta===0?'No change':(delta>0?'+':'')+Number(delta.toFixed(1))+unit;
+    return `<article class="card" style="padding:12px;margin:8px 0;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><strong>${label}</strong><span style="font-size:12px;color:var(--dgray);">${change} since first entry</span></div><svg viewBox="0 0 300 88" role="img" aria-label="${label} trend" style="width:100%;height:82px;margin-top:6px;"><path d="${path}" fill="none" stroke="var(--green,#39c98a)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${coords.map(q=>`<circle cx="${q.x}" cy="${q.y}" r="4" fill="var(--green,#39c98a)"/>`).join('')}</svg><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dgray);"><span>${fmt(first)}${unit}</span><strong>${fmt(last)}${unit}</strong></div><div style="font-size:11px;color:var(--dgray);margin-top:4px;">${points.map(p=>fmtShort(p.date)).join(' · ')}</div></article>`;
+  }).join('');
+  target.innerHTML=parsed.length?`<div class="card-sub">Your coach adds a new check-in each month. The charts show recorded measurements over time.</div>${cards}<div class="card" style="padding:12px;margin-top:10px;">${parsed.slice().reverse().map(p=>`<div class="list-row"><strong>${fmtShort(p.date)}</strong><span>${p.notes||p.strength||'Monthly check-in'}</span></div>`).join('')}</div>`:'<div class="empty-state">Your coach\'s progress updates will appear here.</div>';
 }
 async function uploadPhoto(e){
   const file=e.target.files[0];if(!file)return;
